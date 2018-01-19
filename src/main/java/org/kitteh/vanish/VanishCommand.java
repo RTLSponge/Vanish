@@ -39,10 +39,12 @@ import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.World;
 
-import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
+
+import javax.annotation.Nonnull;
 
 /**
  * Vanish!
@@ -54,7 +56,7 @@ class VanishCommand implements CommandExecutor {
 
     VanishCommand(Vanish plugin) {
         this.plugin = plugin;
-        this.effect = ParticleEffect.builder().type(ParticleTypes.SMOKE_LARGE).count(1).build();
+        this.effect = ParticleEffect.builder().type(ParticleTypes.LARGE_SMOKE).quantity(1).build();
     }
 
     @Nonnull
@@ -65,19 +67,18 @@ class VanishCommand implements CommandExecutor {
             return CommandResult.empty();
         }
         Player player = (Player) commandSource;
-        boolean wasVisible = player.get(Keys.INVISIBLE).orElse(false);
-        player.offer(Keys.INVISIBLE, !wasVisible);
-        player.offer(Keys.INVISIBILITY_IGNORES_COLLISION, !wasVisible);
-        player.offer(Keys.INVISIBILITY_PREVENTS_TARGETING, !wasVisible);
+        boolean wasVisible = player.get(Keys.VANISH).orElse(false);
+        player.offer(Keys.VANISH, !wasVisible);
+        player.offer(Keys.VANISH_IGNORES_COLLISION, !wasVisible);
+        player.offer(Keys.VANISH_PREVENTS_TARGETING, !wasVisible);
         if (player.hasPermission(Vanish.PERMISSION_EFFECTS_BATS)) {
             Set<Entity> bats = new HashSet<>();
-            Location location = player.getLocation();
+            Location<World> location = player.getLocation();
             for (int i = 0; i < 10; i++) {
-                location.getExtent().createEntity(EntityTypes.BAT, location.getPosition()).ifPresent(bat -> {
-                    bats.add(bat);
-                    location.getExtent().spawnEntity(bat, Cause.builder().owner(this.plugin).build()); // TODO Am I doing this right?
-                    bat.offer(Keys.INVULNERABILITY_TICKS, LIFE_TICKS);
-                });
+                final Entity bat = location.getExtent().createEntity(EntityTypes.BAT, location.getPosition());
+                bats.add(bat);
+                location.getExtent().spawnEntity(bat, Cause.builder().owner(this.plugin).build()); // TODO Am I doing this right?
+                bat.offer(Keys.INVULNERABILITY_TICKS, LIFE_TICKS);
             }
             // TODO remove on shutdown too!
             Sponge.getScheduler().createTaskBuilder().delayTicks(LIFE_TICKS).execute(() -> {
